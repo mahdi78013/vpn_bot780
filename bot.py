@@ -1,6 +1,9 @@
 import os
 import logging
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
@@ -20,10 +23,32 @@ from handlers.admin import (
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+# کلاس پاسخ‌دهی به پینگ‌های سرور رندر برای جلوگیری از خطا
+class RenderHealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write("MuntiVPN Bot is running smoothly!".encode("utf-8"))
+
+    def log_message(self, format, *args):
+        # غیرفعال کردن لاگ‌های مکرر سرور HTTP برای خلوت ماندن کنسول ربات
+        return
+
+def run_dummy_server():
+    # دریافت خودکار پورت تنظیم شده توسط رندر
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), RenderHealthCheckHandler)
+    logging.info(f"Dummy HTTP health check server started on port {port}")
+    server.serve_forever()
+
 async def post_init(application):
     await init_db()
 
 def main():
+    # اجرای وب‌سرور فیک در یک Thread مستقل قبل از استارت ربات
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
     # فیلتر هوشمند ضد تداخل دکمه‌ها
