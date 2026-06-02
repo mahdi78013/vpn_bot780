@@ -1,0 +1,15 @@
+# Security and Environment Variables
+.env
+
+# Database
+*.sqlite
+*.db
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environments
+venv/
+env/
